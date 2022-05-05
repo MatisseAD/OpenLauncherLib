@@ -50,12 +50,12 @@ public class AuthInfos
     /**
      * The (optional) client id from the microsoft authenticator
      */
-    private String clientId;
+    private String clientId = "x";
 
     /**
      * The (optional) auth xbox id from the microsoft authenticator
      */
-    private String authXUID;
+    private String authXUID = "x";
 
     /**
      * The uuid given by the authentication
