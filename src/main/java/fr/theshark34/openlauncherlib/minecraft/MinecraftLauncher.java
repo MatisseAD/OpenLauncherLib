@@ -102,9 +102,15 @@ public class MinecraftLauncher
         final String classpath = constructor.make();
         final List<String> args = infos.getGameVersion().getGameType().getLaunchArgs(infos, folder, authInfos);
         final List<String> vmArgs = new ArrayList<>();
-        vmArgs.add("-Djava.library.path=" + Explorer.dir(infos.getGameDir()).sub(folder.getNativesFolder()).get().toString());
-        vmArgs.add("-Dfml.ignoreInvalidMinecraftCertificates=true");
-        vmArgs.add("-Dfml.ignorePatchDiscrepancies=true");
+
+        final String nativesFolder = folder.getNativesFolder();
+        vmArgs.add("-Djava.library.path=" + (nativesFolder.equals(".") ? "." : Explorer.dir(infos.getGameDir()).sub(nativesFolder).get().toString()));
+
+        if(infos.getGameVersion().getGameType() != GameType.FABRIC)
+        {
+            vmArgs.add("-Dfml.ignoreInvalidMinecraftCertificates=true");
+            vmArgs.add("-Dfml.ignorePatchDiscrepancies=true");
+        }
 
         if (infos.getGameTweaks() != null)
         {

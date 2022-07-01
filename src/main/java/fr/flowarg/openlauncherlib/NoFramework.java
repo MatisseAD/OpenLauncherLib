@@ -13,6 +13,7 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.logging.Logger;
 
@@ -25,7 +26,7 @@ public class NoFramework
     private List<String> additionalVmArgs;
     private List<String> additionalArgs;
     private String customVanillaJsonFileName = "";
-    private String customForgeJsonFileName = "";
+    private String customModLoaderJsonFileName = "";
     private String serverName = "";
     private SafeConsumer<ExternalLauncher> lastCallback;
 
@@ -104,31 +105,59 @@ public class NoFramework
         this.keyValue.put("${version_type}", parameters -> "release");
         this.keyValue.put("${clientid}", parameters -> infos.getClientId());
         this.keyValue.put("${auth_xuid}", parameters -> infos.getAuthXUID());
-        this.keyValue.put("${natives_directory}", parameters -> this.gameDir.resolve(folder.getNativesFolder()).toAbsolutePath().toString());
+        this.keyValue.put("${natives_directory}", parameters -> folder.getNativesFolder().equals(".") ? "." : this.gameDir.resolve(folder.getNativesFolder()).toAbsolutePath().toString());
+    }
+
+    public enum ModLoader
+    {
+        FORGE((version, modLoaderVersion) -> version + "-forge-" + modLoaderVersion + ".json"),
+        VANILLA(null),
+        FABRIC((version, modLoaderVersion) -> "fabric-loader-" + modLoaderVersion + "-" + version + ".json"),
+        QUILT((version, modLoaderVersion) -> "quilt-loader-" + modLoaderVersion + "-" + version + ".json"),
+        CUSTOM(null);
+
+        private BiFunction<String, String, String> jsonFileNameProvider;
+
+        ModLoader(BiFunction<String, String, String> jsonFileNameProvider)
+        {
+            this.jsonFileNameProvider = jsonFileNameProvider;
+        }
+
+        public void setJsonFileNameProvider(BiFunction<String, String, String> jsonFileNameProvider)
+        {
+            this.jsonFileNameProvider = jsonFileNameProvider;
+        }
     }
 
     /**
      * Launch the game for the specified versions.
      * @param version Minecraft version (like 1.17.1)
-     * @param forgeVersion Forge version (like 37.0.33), do NOT pass a version like 1.17.1-37.0.33!
+     * @param modLoaderVersion Mod loader version (like 37.0.33 for Forge), do NOT pass a version like 1.17.1-37.0.33!
+     * @param modLoader The type of mod loader.
      * @return the launched process
      * @throws Exception throws an exception if an error has occurred.
      */
-    public Process launch(String version, String forgeVersion) throws Exception
+    public Process launch(String version, String modLoaderVersion, ModLoader modLoader) throws Exception
     {
         final Logger logger = Logger.getLogger("OpenLauncherLib");
         final Path vanillaJson = this.customVanillaJsonFileName.equals("") ? this.gameDir.resolve(version + ".json") : this.gameDir.resolve(this.customVanillaJsonFileName);
         final JSONObject vanilla = new JSONReader(logger, vanillaJson).toJSONObject();
-        final Path forgeJson = this.customForgeJsonFileName.equals("") ? this.gameDir.resolve(version + "-forge-" + forgeVersion + ".json") : this.gameDir.resolve(this.customForgeJsonFileName);
-        final JSONObject forge = new JSONReader(logger, forgeJson).toJSONObject();
+
+        JSONObject modLoaderJsonObject = null;
+
+        if(modLoader != ModLoader.VANILLA)
+        {
+            final Path modLoaderJson = this.customModLoaderJsonFileName.equals("") ? this.gameDir.resolve(modLoader.jsonFileNameProvider.apply(version, modLoaderVersion)) : this.gameDir.resolve(this.customModLoaderJsonFileName);
+            modLoaderJsonObject = new JSONReader(logger, modLoaderJson).toJSONObject();
+        }
 
         LogUtil.info("no-framework");
 
         final ExternalLauncher launcher = new ExternalLauncher(new ExternalLaunchProfile(
-                forge.getString("mainClass"),
-                this.getClassPath(vanilla, forge),
-                this.getVmArgs(vanilla, forge),
-                this.getArgs(vanilla, forge),
+                modLoaderJsonObject != null ? modLoaderJsonObject.getString("mainClass") : vanilla.getString("mainClass"),
+                this.getClassPath(vanilla, modLoaderJsonObject),
+                this.getVmArgs(vanilla, modLoaderJsonObject),
+                this.getArgs(vanilla, modLoaderJsonObject),
                 true,
                 this.serverName.equals("") ? "Minecraft " + version : this.serverName,
                 this.gameDir
@@ -140,10 +169,11 @@ public class NoFramework
         return launcher.launch();
     }
 
-    private List<String> getVmArgs(JSONObject vanilla, JSONObject forge)
+    private List<String> getVmArgs(JSONObject vanilla, JSONObject modLoader)
     {
         final List<String> result = new ArrayList<>(this.getVmArgsFor(vanilla, vanilla));
-        result.addAll(this.getVmArgsFor(forge, vanilla));
+        if(modLoader != null)
+            result.addAll(this.getVmArgsFor(modLoader, vanilla));
         result.addAll(this.additionalVmArgs);
         return result;
     }
@@ -156,7 +186,12 @@ public class NoFramework
 
         final List<String> sb = new ArrayList<>();
 
+        final JSONObject arguments = object.getJSONObject("arguments");
+
+        if(arguments.isNull("jvm")) return sb;
+
         final JSONArray array = object.getJSONObject("arguments").getJSONArray("jvm");
+
         for (Object element : array)
         {
             if(element instanceof String)
@@ -172,14 +207,15 @@ public class NoFramework
         return sb;
     }
 
-    private String getClassPath(JSONObject vanilla, JSONObject forge)
+    private String getClassPath(JSONObject vanilla, JSONObject modLoader)
     {
         final List<String> cp = new ArrayList<>();
 
-        this.appendLibraries(cp, forge);
+        if (modLoader != null)
+            this.appendLibraries(cp, modLoader);
         this.appendLibraries(cp, vanilla);
 
-        cp.add(this.gameDir.toAbsolutePath().resolve("client.jar").toString());
+        cp.add(this.gameDir.toAbsolutePath().resolve(this.clientJar).toString());
 
         return this.toString(cp);
     }
@@ -187,22 +223,29 @@ public class NoFramework
     private void appendLibraries(List<String> sb, JSONObject object)
     {
         object.getJSONArray("libraries").forEach(jsonElement -> {
-
-            final Path path = this.libraries.resolve(((JSONObject)jsonElement).getJSONObject("downloads").getJSONObject("artifact").getString("path"));
+            final JSONObject libraryObject = ((JSONObject)jsonElement);
+            final Path path;
+            if(libraryObject.isNull("downloads"))
+            {
+                final String[] nameParts = libraryObject.getString("name").split(":");
+                path = this.libraries.resolve(nameParts[0].replace('.', '/')).resolve(nameParts[1]).resolve(nameParts[2]).resolve(nameParts[1] + "-" + nameParts[2] + ".jar");
+            }
+            else path = this.libraries.resolve(libraryObject.getJSONObject("downloads").getJSONObject("artifact").getString("path"));
             final String str = path.toAbsolutePath() + File.pathSeparator;
             if(!sb.contains(str) && Files.exists(path))
                 sb.add(str);
         });
     }
 
-    private List<String> getArgs(JSONObject vanilla, JSONObject forge)
+    private List<String> getArgs(JSONObject vanilla, JSONObject modLoader)
     {
         final Parameters parameters = new Parameters();
         parameters.vanilla = vanilla;
-        parameters.processing = forge;
+        parameters.processing = modLoader != null ? modLoader : vanilla;
 
-        final List<String> result = new ArrayList<>(getArgs(vanilla, parameters));
-        result.addAll(this.getArgs(forge, parameters));
+        final List<String> result = new ArrayList<>(this.getArgs(vanilla, parameters));
+        if(modLoader != null)
+            result.addAll(this.getArgs(modLoader, parameters));
         result.addAll(this.additionalArgs);
         return result;
     }
@@ -254,9 +297,9 @@ public class NoFramework
         return this.customVanillaJsonFileName;
     }
 
-    public String getCustomForgeJsonFileName()
+    public String getCustomModLoaderJsonFileName()
     {
-        return this.customForgeJsonFileName;
+        return this.customModLoaderJsonFileName;
     }
 
     public String getServerName()
@@ -297,12 +340,12 @@ public class NoFramework
     }
 
     /**
-     * Define a custom json file's path (start is {@link #gameDir}). (Forge)
-     * @param customForgeJsonFileName custom json file's path.
+     * Define a custom json file's path (start is {@link #gameDir}).
+     * @param customModLoaderJsonFileName custom json file's path.
      */
-    public void setCustomForgeJsonFileName(String customForgeJsonFileName)
+    public void setCustomModLoaderJsonFileName(String customModLoaderJsonFileName)
     {
-        this.customForgeJsonFileName = customForgeJsonFileName;
+        this.customModLoaderJsonFileName = customModLoaderJsonFileName;
     }
 
     /**
@@ -321,5 +364,34 @@ public class NoFramework
     public void setLastCallback(SafeConsumer<ExternalLauncher> lastCallback)
     {
         this.lastCallback = lastCallback;
+    }
+
+    /**
+     * Get the view of the parameters to map
+     * @return the view of the parameters to map
+     */
+    public Map<String, Function<Parameters, String>> boardView()
+    {
+        return Collections.unmodifiableMap(this.keyValue);
+    }
+
+    /**
+     * Define new parameters to map
+     * @param key key
+     * @param value value
+     */
+    public void putArgument(String key, Function<Parameters, String> value)
+    {
+        this.keyValue.putIfAbsent(key, value);
+    }
+
+    /**
+     * Replace an existing mapping function for a parameter
+     * @param key key
+     * @param value value
+     */
+    public void replaceArgument(String key, Function<Parameters, String> value)
+    {
+        this.keyValue.replace(key, value);
     }
 }

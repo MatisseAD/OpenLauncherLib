@@ -46,6 +46,11 @@ public class GameFolder
     public static final GameFolder FLOW_UPDATER = new GameFolder("assets", "libraries", "natives", "client.jar");
 
     /**
+     * The game folder for FlowUpdater (assets, libraries, natives, client.jar) but for a Minecraft version equal or superior to 1.19
+     */
+    public static final GameFolder FLOW_UPDATER_1_19_SUP = new GameFolder("assets", "libraries", ".", "client.jar");
+
+    /**
      * The name of the folder containing the assets
      */
     private final String assetsFolder;
