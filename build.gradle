@@ -1,5 +1,5 @@
 plugins {
-    id 'com.github.johnrengelman.shadow' version '7.1.2'
+    id 'com.github.johnrengelman.shadow' version '8.1.0'
 }
 
 apply plugin: 'java-library'
@@ -8,7 +8,7 @@ apply plugin: 'maven-publish'
 apply plugin: 'signing'
 
 group 'fr.flowarg'
-version '3.2.5'
+version '3.2.6'
 archivesBaseName = 'openlauncherlib'
 
 compileJava {
@@ -27,26 +27,20 @@ jar {
     from "LICENSE.LESSER"
 }
 
-task sourcesJar(type: Jar) {
-    classifier 'sources'
-    from sourceSets.main.allSource
-}
-
-task javadocJar(type: Jar) {
-    classifier 'javadoc'
-    from javadoc
+java {
+    withSourcesJar()
+    withJavadocJar()
 }
 
 artifacts {
-    archives sourcesJar, javadocJar
+    archives sourcesJar
+    archives javadocJar
 }
 
 publishing {
     publications {
         mavenJava(MavenPublication) {
             from components.java
-            artifact tasks.sourcesJar
-            artifact tasks.javadocJar
             
             pom {
                 groupId = project.group
@@ -113,9 +107,9 @@ repositories {
 }
 
 dependencies {
-    implementation 'org.json:json:20220320'
+    implementation 'org.json:json:20230227'
 }
 
 shadowJar {
-    classifier 'shaded'
+    archiveClassifier = 'shaded'
 }

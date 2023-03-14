@@ -110,6 +110,7 @@ public class NoFramework
 
     public enum ModLoader
     {
+        OLD_FORGE((version, modLoaderVersion) -> version + "-forge" + (modLoaderVersion.startsWith(version) ? modLoaderVersion : version + "-" + modLoaderVersion) + ".json"), // only to 1.12.2-14.23.5.2847
         FORGE((version, modLoaderVersion) -> version + "-forge-" + modLoaderVersion + ".json"),
         VANILLA(null),
         FABRIC((version, modLoaderVersion) -> "fabric-loader-" + modLoaderVersion + "-" + version + ".json"),
@@ -186,6 +187,12 @@ public class NoFramework
 
         final List<String> sb = new ArrayList<>();
 
+        if(object.isNull("arguments"))
+        {
+            sb.add("-Djava.library.path=" + this.map("${natives_directory}", parameters));
+            return sb;
+        }
+
         final JSONObject arguments = object.getJSONObject("arguments");
 
         if(arguments.isNull("jvm")) return sb;
@@ -230,7 +237,14 @@ public class NoFramework
                 final String[] nameParts = libraryObject.getString("name").split(":");
                 path = this.libraries.resolve(nameParts[0].replace('.', '/')).resolve(nameParts[1]).resolve(nameParts[2]).resolve(nameParts[1] + "-" + nameParts[2] + ".jar");
             }
-            else path = this.libraries.resolve(libraryObject.getJSONObject("downloads").getJSONObject("artifact").getString("path"));
+            else
+            {
+                final JSONObject downloads = libraryObject.getJSONObject("downloads");
+
+                if(downloads.isNull("artifact"))
+                    return;
+                path = this.libraries.resolve(downloads.getJSONObject("artifact").getString("path"));
+            }
             final String str = path.toAbsolutePath() + File.pathSeparator;
             if(!sb.contains(str) && Files.exists(path))
                 sb.add(str);
@@ -252,7 +266,18 @@ public class NoFramework
 
     private List<String> getArgs(JSONObject object, Parameters parameters)
     {
-        final JSONArray array = object.getJSONObject("arguments").getJSONArray("game");
+        if(object.isNull("arguments"))
+        {
+            if(object.isNull("minecraftArguments") || object == parameters.vanilla)
+                return new ArrayList<>();
+
+            final List<String> sb = new ArrayList<>();
+            for (final String s : object.getString("minecraftArguments").split(" "))
+                sb.add(this.map(s, parameters));
+            return sb;
+        }
+        final JSONObject arguments = object.getJSONObject("arguments");
+        final JSONArray array = arguments.getJSONArray("game");
 
         final List<String> sb = new ArrayList<>();
 
