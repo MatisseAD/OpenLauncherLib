@@ -1,5 +1,5 @@
 plugins {
-    id 'com.github.johnrengelman.shadow' version '8.1.0'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
 apply plugin: 'java-library'
@@ -8,7 +8,7 @@ apply plugin: 'maven-publish'
 apply plugin: 'signing'
 
 group 'fr.flowarg'
-version '3.2.6'
+version '3.2.7'
 archivesBaseName = 'openlauncherlib'
 
 compileJava {
@@ -107,7 +107,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'org.json:json:20230227'
+    implementation 'org.json:json:20231013'
 }
 
 shadowJar {

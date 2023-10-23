@@ -106,6 +106,7 @@ public class NoFramework
         this.keyValue.put("${clientid}", parameters -> infos.getClientId());
         this.keyValue.put("${auth_xuid}", parameters -> infos.getAuthXUID());
         this.keyValue.put("${natives_directory}", parameters -> folder.getNativesFolder().equals(".") ? "." : this.gameDir.resolve(folder.getNativesFolder()).toAbsolutePath().toString());
+        this.keyValue.put("${user_properties}", parameters -> "{}");
     }
 
     public enum ModLoader
