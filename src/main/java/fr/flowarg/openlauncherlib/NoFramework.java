@@ -113,6 +113,7 @@ public class NoFramework
     {
         OLD_FORGE((version, modLoaderVersion) -> version + "-forge" + (modLoaderVersion.startsWith(version) ? modLoaderVersion : version + "-" + modLoaderVersion) + ".json"), // only to 1.12.2-14.23.5.2847
         FORGE((version, modLoaderVersion) -> version + "-forge-" + modLoaderVersion + ".json"),
+        NEO_FORGE((version, modLoaderVersion) -> "neoforge-" + modLoaderVersion + ".json"),
         VANILLA(null),
         FABRIC((version, modLoaderVersion) -> "fabric-loader-" + modLoaderVersion + "-" + version + ".json"),
         QUILT((version, modLoaderVersion) -> "quilt-loader-" + modLoaderVersion + "-" + version + ".json"),
