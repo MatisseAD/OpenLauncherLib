@@ -30,7 +30,7 @@ public class NoFramework
     private String serverName = "";
     private SafeConsumer<ExternalLauncher> lastCallback;
 
-    private static class Parameters
+    public static class Parameters
     {
         private JSONObject vanilla;
         private JSONObject processing;
@@ -111,12 +111,33 @@ public class NoFramework
 
     public enum ModLoader
     {
+        /**
+         * For quite old versions of Forge
+         */
         OLD_FORGE((version, modLoaderVersion) -> version + "-forge" + (modLoaderVersion.startsWith(version) ? modLoaderVersion : version + "-" + modLoaderVersion) + ".json"), // only to 1.12.2-14.23.5.2847
+        /**
+         * For modern Forge users
+         */
         FORGE((version, modLoaderVersion) -> version + "-forge-" + modLoaderVersion + ".json"),
+        /**
+         * For NeoForge users
+         */
         NEO_FORGE((version, modLoaderVersion) -> "neoforge-" + modLoaderVersion + ".json"),
+        /**
+         * For Vanilla/MCP users
+         */
         VANILLA(null),
+        /**
+         * For Fabric users
+         */
         FABRIC((version, modLoaderVersion) -> "fabric-loader-" + modLoaderVersion + "-" + version + ".json"),
+        /**
+         * For Quilt users
+         */
         QUILT((version, modLoaderVersion) -> "quilt-loader-" + modLoaderVersion + "-" + version + ".json"),
+        /**
+         * Custom ModLoader that still provides a JSON compiling what NoFramework needs.
+         */
         CUSTOM(null);
 
         private BiFunction<String, String, String> jsonFileNameProvider;
@@ -126,6 +147,11 @@ public class NoFramework
             this.jsonFileNameProvider = jsonFileNameProvider;
         }
 
+        /**
+         * Use this function to replace the json file name provider.
+         * It's quite useful for some hack in case NoFramework doesn't implement a mod loader or in a bad way.
+         * @param jsonFileNameProvider the new json file name provider.
+         */
         public void setJsonFileNameProvider(BiFunction<String, String, String> jsonFileNameProvider)
         {
             this.jsonFileNameProvider = jsonFileNameProvider;
@@ -143,14 +169,14 @@ public class NoFramework
     public Process launch(String version, String modLoaderVersion, ModLoader modLoader) throws Exception
     {
         final Logger logger = Logger.getLogger("OpenLauncherLib");
-        final Path vanillaJson = this.customVanillaJsonFileName.equals("") ? this.gameDir.resolve(version + ".json") : this.gameDir.resolve(this.customVanillaJsonFileName);
+        final Path vanillaJson = this.customVanillaJsonFileName.isEmpty() ? this.gameDir.resolve(version + ".json") : this.gameDir.resolve(this.customVanillaJsonFileName);
         final JSONObject vanilla = new JSONReader(logger, vanillaJson).toJSONObject();
 
         JSONObject modLoaderJsonObject = null;
 
         if(modLoader != ModLoader.VANILLA)
         {
-            final Path modLoaderJson = this.customModLoaderJsonFileName.equals("") ? this.gameDir.resolve(modLoader.jsonFileNameProvider.apply(version, modLoaderVersion)) : this.gameDir.resolve(this.customModLoaderJsonFileName);
+            final Path modLoaderJson = this.customModLoaderJsonFileName.isEmpty() ? this.gameDir.resolve(modLoader.jsonFileNameProvider.apply(version, modLoaderVersion)) : this.gameDir.resolve(this.customModLoaderJsonFileName);
             modLoaderJsonObject = new JSONReader(logger, modLoaderJson).toJSONObject();
         }
 
@@ -161,8 +187,7 @@ public class NoFramework
                 this.getClassPath(vanilla, modLoaderJsonObject),
                 this.getVmArgs(vanilla, modLoaderJsonObject),
                 this.getArgs(vanilla, modLoaderJsonObject),
-                true,
-                this.serverName.equals("") ? "Minecraft " + version : this.serverName,
+                true, this.serverName.isEmpty() ? "Minecraft " + version : this.serverName,
                 this.gameDir
         ));
 
@@ -259,18 +284,18 @@ public class NoFramework
         parameters.vanilla = vanilla;
         parameters.processing = modLoader != null ? modLoader : vanilla;
 
-        final List<String> result = new ArrayList<>(this.getArgs(vanilla, parameters));
+        final List<String> result = new ArrayList<>(this.getArgs(vanilla, parameters, modLoader != null));
         if(modLoader != null)
-            result.addAll(this.getArgs(modLoader, parameters));
+            result.addAll(this.getArgs(modLoader, parameters, true));
         result.addAll(this.additionalArgs);
         return result;
     }
 
-    private List<String> getArgs(JSONObject object, Parameters parameters)
+    private List<String> getArgs(JSONObject object, Parameters parameters, boolean hasModLoader)
     {
         if(object.isNull("arguments"))
         {
-            if(object.isNull("minecraftArguments") || object == parameters.vanilla)
+            if(object.isNull("minecraftArguments") || hasModLoader)
                 return new ArrayList<>();
 
             final List<String> sb = new ArrayList<>();

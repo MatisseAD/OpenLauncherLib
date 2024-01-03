@@ -8,7 +8,7 @@ apply plugin: 'maven-publish'
 apply plugin: 'signing'
 
 group 'fr.flowarg'
-version '3.2.7'
+version '3.2.8'
 archivesBaseName = 'openlauncherlib'
 
 compileJava {
