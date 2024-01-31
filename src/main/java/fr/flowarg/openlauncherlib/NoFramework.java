@@ -284,37 +284,49 @@ public class NoFramework
         parameters.vanilla = vanilla;
         parameters.processing = modLoader != null ? modLoader : vanilla;
 
-        final List<String> result = new ArrayList<>(this.getArgs(vanilla, parameters, modLoader != null));
-        if(modLoader != null)
-            result.addAll(this.getArgs(modLoader, parameters, true));
+        final List<String> result = new ArrayList<>();
+
+        if(modLoader == null)
+            result.addAll(this.getArguments(vanilla, parameters)); // vanilla/mcp only
+        else
+        {
+            if(vanilla.isNull("arguments"))
+                result.addAll(this.getArguments(modLoader, parameters)); // old forge
+            else
+            {
+                result.addAll(this.getArguments(vanilla, parameters)); // vanilla
+                result.addAll(this.getArguments(modLoader, parameters)); // new forge (and other modern mod loaders)
+            }
+        }
+
         result.addAll(this.additionalArgs);
         return result;
     }
 
-    private List<String> getArgs(JSONObject object, Parameters parameters, boolean hasModLoader)
+    private List<String> getArguments(JSONObject object, Parameters parameters)
     {
         if(object.isNull("arguments"))
         {
-            if(object.isNull("minecraftArguments") || hasModLoader)
+            if(object.isNull("minecraftArguments"))
                 return new ArrayList<>();
+            else return Arrays.asList(this.map(object.getString("minecraftArguments"), parameters).split(" "));
+        }
+        else
+        {
+            final JSONObject arguments = object.getJSONObject("arguments");
+            final JSONArray array = arguments.getJSONArray("game");
 
             final List<String> sb = new ArrayList<>();
-            for (final String s : object.getString("minecraftArguments").split(" "))
-                sb.add(this.map(s, parameters));
+
+            for (Object element : array)
+            {
+                if(element instanceof String)
+                    sb.add(this.map((String)element, parameters));
+            }
+
             return sb;
         }
-        final JSONObject arguments = object.getJSONObject("arguments");
-        final JSONArray array = arguments.getJSONArray("game");
 
-        final List<String> sb = new ArrayList<>();
-
-        for (Object element : array)
-        {
-            if(element instanceof String)
-                sb.add(this.map((String)element, parameters));
-        }
-
-        return sb;
     }
 
     private String map(String str, Parameters parameters)
