@@ -17,6 +17,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.logging.Logger;
 
+@SuppressWarnings("unused")
 public class NoFramework
 {
     private final Map<String, Function<Parameters, String>> keyValue = new HashMap<>();
@@ -111,6 +112,10 @@ public class NoFramework
 
     public enum ModLoader
     {
+        /**
+         * For 1.7.10
+         */
+        VERY_OLD_FORGE((version, modLoaderVersion) -> version + "-Forge" + modLoaderVersion + "-" + version + ".json"),
         /**
          * For quite old versions of Forge
          */
