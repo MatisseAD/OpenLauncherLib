@@ -255,7 +255,7 @@ public class NoFramework
             this.appendLibraries(cp, modLoader);
         this.appendLibraries(cp, vanilla);
 
-        cp.add(this.gameDir.toAbsolutePath().resolve(this.clientJar).toString());
+        cp.add(this.gameDir.resolve(this.clientJar).toAbsolutePath().toString());
 
         return this.toString(cp);
     }
@@ -315,7 +315,14 @@ public class NoFramework
         {
             if(object.isNull("minecraftArguments"))
                 return new ArrayList<>();
-            else return Arrays.asList(this.map(object.getString("minecraftArguments"), parameters).split(" "));
+            else
+            {
+                final String[] arguments = object.getString("minecraftArguments").split(" ");
+                final List<String> result = new ArrayList<>();
+                for (String argument : arguments)
+                    result.add(this.map(argument, parameters));
+                return result;
+            }
         }
         else
         {

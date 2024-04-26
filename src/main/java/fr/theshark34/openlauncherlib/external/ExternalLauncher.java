@@ -137,10 +137,11 @@ public class ExternalLauncher
             vmArgs.addAll(profile.getArgs());
 
         if (profile.getDirectory() != null)
-            builder.directory(profile.getDirectory().toFile());
+            builder.directory(profile.getDirectory().toAbsolutePath().toFile());
 
-        if (profile.isRedirectErrorStream())
-            builder.redirectErrorStream(true);
+        builder.redirectErrorStream(true);
+        builder.redirectError(ProcessBuilder.Redirect.INHERIT);
+        builder.redirectOutput(ProcessBuilder.Redirect.INHERIT);
 
         if (launchingEvent != null)
             launchingEvent.onLaunching(builder);
