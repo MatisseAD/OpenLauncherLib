@@ -221,7 +221,8 @@ public class NoFramework
 
         if(object.isNull("arguments"))
         {
-            sb.add("-Djava.library.path=" + this.map("${natives_directory}", parameters));
+            if(vanilla == object)
+                sb.add("-Djava.library.path=" + this.map("${natives_directory}", parameters));
             return sb;
         }
 
