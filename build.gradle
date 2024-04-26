@@ -1,25 +1,24 @@
 plugins {
+    id 'java-library'
+    id 'idea'
+    id 'maven-publish'
+    id 'signing'
     id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
-apply plugin: 'java-library'
-apply plugin: 'idea'
-apply plugin: 'maven-publish'
-apply plugin: 'signing'
-
 group 'fr.flowarg'
-version '3.2.9'
+version '3.2.10'
 archivesBaseName = 'openlauncherlib'
-
-compileJava {
-    sourceCompatibility = targetCompatibility = JavaVersion.VERSION_1_8
-    options.encoding = 'UTF-8'
-}
 
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(8)
     }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    sourceCompatibility = JavaVersion.VERSION_1_8
 }
 
 jar {
@@ -30,11 +29,6 @@ jar {
 java {
     withSourcesJar()
     withJavadocJar()
-}
-
-artifacts {
-    archives sourcesJar
-    archives javadocJar
 }
 
 publishing {
@@ -107,9 +101,9 @@ repositories {
 }
 
 dependencies {
-    implementation 'org.json:json:20231013'
+    implementation 'org.json:json:20240303'
 }
 
 shadowJar {
-    archiveClassifier = 'shaded'
+    archiveClassifier.set('shaded')
 }
