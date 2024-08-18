@@ -250,26 +250,28 @@ public class NoFramework
     private String getClassPath(JSONObject vanilla, JSONObject modLoader)
     {
         final List<String> cp = new ArrayList<>();
+        final List<String> artifacts = new ArrayList<>();
 
         if (modLoader != null)
-            this.appendLibraries(cp, modLoader);
-        this.appendLibraries(cp, vanilla);
+            this.appendLibraries(cp, artifacts, modLoader);
+        this.appendLibraries(cp, artifacts, vanilla);
 
         cp.add(this.gameDir.resolve(this.clientJar).toAbsolutePath().toString());
 
         return this.toString(cp);
     }
 
-    private void appendLibraries(List<String> sb, JSONObject object)
+    private void appendLibraries(List<String> sb, List<String> artifacts, JSONObject object)
     {
         object.getJSONArray("libraries").forEach(jsonElement -> {
             final JSONObject libraryObject = ((JSONObject)jsonElement);
             final Path path;
+            final String[] nameParts = libraryObject.getString("name").split(":");
+            String internalArtifactName = nameParts[0] + ':' + nameParts[1];
+            if(nameParts.length == 4)
+                internalArtifactName += ':' + nameParts[3];
             if(libraryObject.isNull("downloads"))
-            {
-                final String[] nameParts = libraryObject.getString("name").split(":");
                 path = this.libraries.resolve(nameParts[0].replace('.', '/')).resolve(nameParts[1]).resolve(nameParts[2]).resolve(nameParts[1] + "-" + nameParts[2] + ".jar");
-            }
             else
             {
                 final JSONObject downloads = libraryObject.getJSONObject("downloads");
@@ -279,8 +281,11 @@ public class NoFramework
                 path = this.libraries.resolve(downloads.getJSONObject("artifact").getString("path"));
             }
             final String str = path.toAbsolutePath() + File.pathSeparator;
-            if(!sb.contains(str) && Files.exists(path))
+            if(!sb.contains(str) && Files.exists(path) && !artifacts.contains(internalArtifactName))
+            {
                 sb.add(str);
+                artifacts.add(internalArtifactName);
+            }
         });
     }
 
