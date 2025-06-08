@@ -12,13 +12,13 @@ archivesBaseName = 'openlauncherlib'
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(8)
+        languageVersion = JavaLanguageVersion.of(17)
     }
 }
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
-    sourceCompatibility = JavaVersion.VERSION_1_8
+    sourceCompatibility = JavaVersion.VERSION_17
 }
 
 jar {
@@ -102,6 +102,7 @@ repositories {
 
 dependencies {
     implementation 'org.json:json:20240303'
+    testImplementation 'junit:junit:4.13.2'
 }
 
 shadowJar {
