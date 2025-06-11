@@ -92,3 +92,10 @@ ExternalLauncher launcher = new ExternalLauncher(profile);
 
 launcher.launch();
 ```
+
+### Example with Forge
+
+```java
+NoFramework framework = new NoFramework(Path.of("./game"), authInfos, GameFolder.BASIC);
+Process p = framework.launch("1.20.1", "47.1.0", NoFramework.ModLoader.FORGE);
+```

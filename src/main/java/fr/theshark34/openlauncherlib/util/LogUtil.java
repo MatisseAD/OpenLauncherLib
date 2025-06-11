@@ -53,6 +53,14 @@ public final class LogUtil
      */
     private static final LanguageInfo IDENTIFIER = () -> "OpenLauncherLib";
 
+    public enum Level { INFO, WARN, ERROR }
+
+    private static Level level = Level.INFO;
+
+    public static void setLevel(Level lvl) {
+        level = lvl;
+    }
+
     static
     {
         LANGUAGE_MANAGER.registerLanguage(IDENTIFIER, LanguageTypes.EN, "/assets/languages/");
@@ -103,8 +111,11 @@ public final class LogUtil
             builder.append(" ").append(LANGUAGE_MANAGER.getDefaultLanguage().get(IDENTIFIER, node));
         }
 
-        if (err) System.err.println(builder);
-        else System.out.println(builder);
+        if (err) {
+            System.err.println(builder);
+        } else {
+            System.out.println(builder);
+        }
     }
 
     /**
@@ -134,7 +145,21 @@ public final class LogUtil
      */
     public static void info(String... messages)
     {
-        message(false, messages);
+        if (level.ordinal() <= Level.INFO.ordinal()) {
+            message(false, messages);
+        }
+    }
+
+    /**
+     * Print a warning message.
+     *
+     * @param messages strings to translate
+     */
+    public static void warn(String... messages)
+    {
+        if (level.ordinal() <= Level.WARN.ordinal()) {
+            message(false, messages);
+        }
     }
 
     /**
@@ -144,6 +169,8 @@ public final class LogUtil
      */
     public static void err(String... messages)
     {
-        message(true, messages);
+        if (level.ordinal() <= Level.ERROR.ordinal()) {
+            message(true, messages);
+        }
     }
 }

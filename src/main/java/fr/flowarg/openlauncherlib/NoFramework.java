@@ -6,6 +6,7 @@ import fr.theshark34.openlauncherlib.external.ExternalLauncher;
 import fr.theshark34.openlauncherlib.minecraft.AuthInfos;
 import fr.theshark34.openlauncherlib.minecraft.GameFolder;
 import fr.theshark34.openlauncherlib.util.LogUtil;
+import fr.flowarg.openlauncherlib.ModLoaderRegistry;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -200,6 +201,26 @@ public class NoFramework
             this.lastCallback.accept(launcher);
 
         return launcher.launch();
+    }
+
+    /**
+     * Launch the game using a custom mod loader registered in {@link ModLoaderRegistry}.
+     *
+     * @param version Minecraft version
+     * @param modLoaderVersion Version of the mod loader
+     * @param customModLoaderName name of the registered custom mod loader
+     * @return the launched process
+     * @throws Exception if an error occurs
+     */
+    public Process launch(String version, String modLoaderVersion, String customModLoaderName) throws Exception {
+        var provider = ModLoaderRegistry.get(customModLoaderName);
+        if (provider == null) {
+            throw new IllegalArgumentException("Unknown mod loader: " + customModLoaderName);
+        }
+
+        ModLoader custom = ModLoader.CUSTOM;
+        custom.setJsonFileNameProvider(provider);
+        return launch(version, modLoaderVersion, custom);
     }
 
     private List<String> getVmArgs(JSONObject vanilla, JSONObject modLoader)
